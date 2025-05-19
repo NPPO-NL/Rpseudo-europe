@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Script: Phylogenetic Tree Construction from ANIm Data
-# Author: [Tom M. Raaymakers] # Please update with the correct author name
+# Author: Tom M. Raaymakers
 # Date: 2025-05-19
 # Description: This script takes Average Nucleotide Identity (ANI) percentage
 #              data, calculates pairwise distances, performs UPGMA
