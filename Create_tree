@@ -1,0 +1,147 @@
+# -----------------------------------------------------------------------------
+# Script: Phylogenetic Tree Visualization with ggtree
+# Author: Tom M. Raaymakers
+# Date: 2025-05-19
+# Description: This script loads a Newick phylogenetic tree and associated
+#              metadata to generate a visualization using ggtree.#            
+# -----------------------------------------------------------------------------
+
+# --- 1. Package Management ---
+
+# Use pacman to load/install packages.
+# ggplot2: for plotting (ggtree dependency)
+# treedataverse: meta-package for ggtree and related tools (includes ggtree)
+# tidyverse: for tidying up data
+# ggnewscale: for using multiple color/fill scales in ggplot
+# ggtext: for rendering rich text (e.g., markdown/html in labels)
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(ggplot2, treedataverse, tidyverse, dplyr, ggnewscale, ggtext) 
+
+# Note: treedataverse is a Bioconductor package.
+# If pacman fails for treedataverse, you might need to install it via BiocManager first:
+# if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+# BiocManager::install("YuLab-SMU/treedataverse")
+# Then try loading again with pacman or library(treedataverse).
+
+# --- 2. Set Working Directory & File Paths (User-specific) ---
+
+setwd("X:/tree")
+# Alternatively, ensure your input file is in the current working directory.
+
+# Define input file path
+tree_file <- "pyani_ANIm_upgma_tree.nwk" # Newick tree file
+
+# --- 3. Load Data ---
+
+# Load Newick tree
+tree <- read.newick(tree_file)
+tree$tip.label <- gsub("_", " ", tree$tip.label) # Replace underscores with spaces in tip labels
+
+# Load metadata, location user specific
+metadata <- read.csv2("X:/metadata.txt", sep = "\t")
+
+# --- 4. Preprocess Metadata ---
+
+# Function to italicize plant species names (HTML for ggtext)
+italicize_html <- function(text) {
+  if (text == "Surface water") {
+    return(text)
+  }
+  if (grepl("sp\\.$", text)) {
+    return(gsub("^(\\w+)", "<i>\\1</i>", text))
+  }
+  return(gsub("^(\\w+ \\w+)", "<i>\\1</i>", text))
+}
+
+# Apply italicization to the 'Matrix' column
+metadata$Matrix <- sapply(metadata$Matrix, italicize_html)
+
+# --- 5. Define Color Schemes ---
+
+# Colors for 'family' 
+  family_colors <- c(
+    "Araceae" = "pink",
+    "Cucurbitaceae" = "#67AB05",
+    "Moraceae" = "#FF5733",
+    "Rosaceae" = "#b21c0e",
+    "Solanaceae" = "#7a5e8d",
+    "Surface water" = "#0f5e9c",
+    "Unknown" = "black",
+    "Zingiberaceae" = "#CCB647"
+  )
+
+# Colors for 'Clade2'
+clade_colors <- c(
+  "I" = "darkgreen", "II" = "black", "III" = "black", "IV" = "cornflowerblue",
+  "V" = "black", "VI" = "black", "VII" = "black", "VIII" = "black",
+  "IX" = "black", "X" = "black", "XI" = "black", "XII" = "black", "XIII" = "black"
+)
+
+# Colors for 'number'
+# Consider storing this in a separate file if it becomes too long.
+number_colors <- c(
+  "1"="#b21c0e", "2"="#b21c0e", "3"="#0f5e9c", "4"="#0f5e9c", "5"="#7a5e8d",
+  "6"="#7a5e8d", "7"="#7a5e8d", "8"="#7a5e8d", "9"="#7a5e8d", "10"="#b21c0e",
+  "11"="#0f5e9c", "12"="#7a5e8d", "13"="#7a5e8d", "14"="#b21c0e", "15"="#b21c0e",
+  "16"="#b21c0e", "17"="#b21c0e", "18"="#b21c0e", "19"="#7a5e8d", "20"="#0f5e9c",
+  "21"="#0f5e9c", "22"="#0f5e9c", "23"="#0f5e9c", "24"="#0f5e9c", "25"="#7a5e8d",
+  "26"="orange", "27"="orange", "28"="orange", "29"="orange", "30"="brown",
+  "31"="green", "32"="orange", "33"="blue", "34"="green", "35"="green",
+  "36"="green", "37"="olivedrab", "38"="turquoise", "39"="turquoise",
+  "40"="turquoise", "41"="turquoise", "42"="red", "43"="turquoise", "44"="turquoise"
+)
+
+# --- 6. Prepare Data for Plotting ---
+
+# Ensure 'Clade2' is a factor for correct ordering in legend/plot
+if ("Clade2" %in% colnames(metadata)) {
+  clade_levels <- c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII")
+  metadata$Clade2 <- factor(metadata$Clade2, levels = clade_levels)
+} else {
+  warning("Column 'Clade2' not found in metadata.")
+}
+
+# --- 7. Create Tree Plot with ggtree ---
+
+p <- ggtree(tree) %<+% metadata +
+  geom_tiplab(aes(label = Isolate, color = Clade2), size = 3, align = TRUE, linesize = .5, offset = .01, show.legend = FALSE) +
+  scale_color_manual(values = clade_colors, name = "Clade") +  # Apply custom colors for clades
+  
+  new_scale_color() +  # Separate scale for number colors
+  
+  geom_richtext(aes(label = number, color = as.character(number)), size = 3, nudge_x = 0.11, nudge_y = -0.22, hjust = 0, fill = NA, label.color = NA, show.legend = FALSE) +
+  scale_color_manual(values = number_colors, name = "Number") +  # Apply custom colors for numbers
+  
+  new_scale_color() +  # Separate scale for family colors
+  
+  geom_richtext(aes(label = Matrix, color = family), size = 3, nudge_x = 0.125, nudge_y = -0.22, hjust = 0, fill = NA, label.color = NA) +
+  scale_color_manual(values = family_colors, na.translate = FALSE, name = "Family") +  # Apply custom colors for family
+  
+  geom_tiplab(aes(label = CoO), size = 3, align = TRUE, linetype = 0, linesize = .5, offset = .23) +
+  geom_tiplab(aes(label = Year), size = 3, align = TRUE, linetype = 0, linesize = .5, offset = .32) +
+  
+  geom_treescale(width = 0.2, x = 0, y = -1, offset = 0.25, fontsize = 3) +  # Adjust the scale bar size and position
+  guides(color = guide_legend(override.aes = list(label = "\u25A0", size = 4))) +  # Set legend to filled squares
+  theme(
+    legend.position = c(0.07, 0.65),
+    legend.title = element_blank(),
+    legend.key.size = unit(1, "lines")
+  )
+
+# --- 8. Save Plot ---
+
+# Generate filename with current date
+current_date <- format(Sys.Date(), "%Y%m%d")
+output_filename <- paste0(current_date, "_ANIm_UPGMA_Tree_Visualization.pdf")
+
+# Save plot to PDF
+ggsave(output_filename,
+       plot = p,
+       width = 13, # inches
+       height = 7, # inches
+       device = cairo_pdf)
+
+cat("Tree visualization complete.\n")
+cat("Plot saved to:", output_filename, "\n")
+
+# End of script
