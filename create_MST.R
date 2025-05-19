@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # Script: Minimum Spanning Tree Analysis and Visualization
-# Author: [Tom M. Raaymakers]
+# Author: Tom M. Raaymakers
 # Date: 2025-05-14 
 # Description: This script performs cgMLST data processing, calculates
 #              pairwise distances, constructs a minimum spanning tree (MST),
